@@ -1,6 +1,6 @@
 # ShellMind 
 
-An intelligent shell assistant that translates natural language into precise shell commands using AI. Perfect for developers, DevOps engineers, and system administrators who want to work faster and more efficiently in the terminal.
+AI-driven command synthesis for a seamless terminal experience. ShellMind translates natural language into precise shell commands, empowering developers, DevOps engineers, and system administrators to work faster and smarter.
 
 ![ShellMind Demo](https://via.placeholder.com/800x400/1a1a2e/00d4ff?text=ShellMind+Terminal+Interface)
 
