@@ -1,10 +1,11 @@
 [project]
 name = "shell-mind"
 version = "0.1.0"
-description = "Add your description here"
+description = "AI-driven command synthesis for a seamless terminal experience"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "click>=8.0.0",
     "dotenv>=0.9.9",
     "groq>=0.37.1",
     "ipykernel>=7.1.0",
@@ -12,4 +13,18 @@ dependencies = [
     "questionary>=2.0.0",
     "simple-term-menu>=1.6.4",
     "textual>=0.79.1",
+    "instructor>=1.6.4",
 ]
+
+[project.scripts]
+sm = "cli.main:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src", "cli"]
+
+[tool.uv]
+package = true
