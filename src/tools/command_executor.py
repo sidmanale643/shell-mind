@@ -1,0 +1,216 @@
+import subprocess
+import json
+import time
+from .schema import ToolSchema
+from textwrap import dedent
+from rich.console import Console
+from rich.text import Text
+from rich.prompt import Prompt, Confirm
+
+
+class CommandExecutor(ToolSchema):
+    """
+    Executes shell commands with safety constraints.
+    Classifies commands by risk level and enforces execution policies.
+    """
+    
+    def __init__(self):
+        self.name = "run_command"
+        self.console = Console()
+        
+        # Safe read-only commands that can be executed without restrictions
+        self.safe_prefixes = [
+            "ls", "cat", "head", "tail", "grep", "find", "wc", "echo",
+            "ps", "top", "htop", "df", "du", "free", "uptime", "whoami",
+            "pwd", "which", "whereis", "file", "stat", "date",
+            "docker ps", "docker images", "docker inspect", "docker logs", "docker stats",
+            "kubectl get", "kubectl describe", "kubectl logs", "kubectl top",
+            "git status", "git log", "git diff", "git branch", "git show",
+            "systemctl status", "systemctl list-units", "journalctl",
+            "aws s3 ls", "aws ec2 describe-instances", "gcloud compute instances list",
+            "terraform show", "terraform plan", "helm list", "helm status",
+            "curl", "wget --spider", "ping", "dig", "nslookup", "netstat", "ss",
+            "env", "printenv", "uname", "hostname"
+        ]
+        
+        # Dangerous commands that should never be executed
+        self.dangerous_patterns = [
+            "rm -rf", "rm -fr", "rm -r", "rm -f",
+            "dd if=", "mkfs", "fdisk", "parted",
+            "> /dev/", "shutdown", "reboot", "halt", "poweroff",
+            "kill -9", "killall", "pkill -9",
+            "chmod 777", "chown -R", "chmod -R 777",
+            ":(){ :|:& };:",  # Fork bomb
+            "mv /", "cp -r /", "rsync -a /",
+            "wget http", "curl http", "curl -X POST", "curl -X PUT", "curl -X DELETE",
+            "docker rm", "docker rmi", "docker system prune",
+            "kubectl delete", "kubectl apply", "kubectl create",
+            "git push", "git reset --hard", "git clean -fd",
+            "npm install -g", "pip install", "apt install", "yum install", "brew install",
+            "systemctl stop", "systemctl restart", "systemctl disable",
+            "iptables", "ufw", "firewall-cmd",
+            "crontab -r", "at ", "batch",
+            "sudo su", "su -", "sudo -i"
+        ]
+    
+    def description(self):
+        return dedent("""
+        Executes shell commands and returns their output.
+        
+        Use this tool to:
+        - Check system status (processes, disk usage, memory)
+        - Inspect Docker containers and images
+        - Query Kubernetes resources
+        - Read logs and system information
+        - Verify service status
+        - Run diagnostic commands
+        
+        Safety Features:
+        - Only safe and moderate commands are allowed via this tool
+        - All commands require explicit user confirmation before execution
+        - Dangerous commands (rm, dd, shutdown, etc.) are blocked
+        - Commands timeout after 30 seconds
+        - Output is limited to 10KB
+        
+        Examples:
+        - "docker ps -a"
+        - "kubectl get pods -n production"
+        - "systemctl status nginx"
+        - "df -h"
+        - "ps aux | grep nginx"
+        
+        Note: Commands are executed in the user's current shell environment.
+        """)
+    
+    def json_schema(self):
+        return {
+            "type": "function",
+            "function": {
+                "name": self.name,
+                "description": self.description(),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "command": {
+                            "type": "string",
+                            "description": "The shell command to execute (e.g., 'docker ps', 'ls -la /tmp')"
+                        },
+                        "timeout": {
+                            "type": "integer",
+                            "description": "Timeout in seconds (default: 30)",
+                            "default": 30
+                        }
+                    },
+                    "required": ["command"]
+                }
+            }
+        }
+    
+    def _classify_risk(self, command: str) -> str:
+        """
+        Classify command risk level.
+        Returns: 'safe', 'moderate', or 'dangerous'
+        """
+        command_lower = command.lower().strip()
+        
+        # Check for dangerous patterns
+        for pattern in self.dangerous_patterns:
+            if pattern.lower() in command_lower:
+                return "dangerous"
+        
+        # Check for safe prefixes
+        for prefix in self.safe_prefixes:
+            if command_lower.startswith(prefix.lower()):
+                return "safe"
+        
+        # Default to moderate for unknown commands
+        return "moderate"
+    
+    def _is_safe_command(self, command: str) -> bool:
+        """Check if command is safe to execute."""
+        risk = self._classify_risk(command)
+        return risk == "safe"
+    
+    def run(self, command: str, timeout: int = 30):
+        """
+        Execute a shell command with safety checks.
+        
+        Args:
+            command: Shell command to execute
+            timeout: Maximum execution time in seconds
+            
+        Returns:
+            JSON string with execution results
+        """
+        # Validate command safety
+        risk_level = self._classify_risk(command)
+        
+        if risk_level == "dangerous":
+            return json.dumps({
+                "success": False,
+                "error": "Command rejected: This command is classified as dangerous and cannot be executed.",
+                "risk_level": "dangerous",
+                "command": command,
+                "suggestion": "Please run this command manually if you're certain it's safe."
+            }, indent=2)
+
+        THEME_WARNING = "yellow"
+        confirm_text = Text("Execute this command?", style="bold " + THEME_WARNING)
+        
+        should_execute = Confirm.ask(confirm_text)
+
+        if should_execute:
+            try:
+                start_time = time.time()
+                
+                result = subprocess.run(
+                    command,
+                    shell=True,
+                    capture_output=True,
+                    text=True,
+                    timeout=timeout
+                )
+                
+                execution_time = time.time() - start_time
+                
+                # Limit output size to 10KB
+                max_output_size = 10 * 1024  # 10KB
+                stdout = result.stdout[:max_output_size]
+                stderr = result.stderr[:max_output_size]
+                
+                stdout_truncated = len(result.stdout) > max_output_size
+                stderr_truncated = len(result.stderr) > max_output_size
+                
+                return json.dumps({
+                    "success": result.returncode == 0,
+                    "command": command,
+                    "return_code": result.returncode,
+                    "stdout": stdout.strip() if stdout else "",
+                    "stderr": stderr.strip() if stderr else "",
+                    "execution_time": round(execution_time, 2),
+                    "stdout_truncated": stdout_truncated,
+                    "stderr_truncated": stderr_truncated,
+                    "risk_level": risk_level
+                }, indent=2)
+                
+            except subprocess.TimeoutExpired:
+                return json.dumps({
+                    "success": False,
+                    "error": f"Command timed out after {timeout} seconds",
+                    "command": command,
+                    "timeout": timeout
+                }, indent=2)
+                
+            except Exception as e:
+                return json.dumps({
+                    "success": False,
+                    "error": f"Execution failed: {str(e)}",
+                    "command": command
+                }, indent=2)
+
+        else:
+            return json.dumps({
+                "success": False,
+                "error": "User rejected the command",
+                "command": command
+            }, indent=2)
