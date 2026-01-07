@@ -12,8 +12,10 @@ dependencies = [
     "rich>=14.2.0",
     "questionary>=2.0.0",
     "simple-term-menu>=1.6.4",
-    "textual>=0.79.1",
+
     "instructor>=1.6.4",
+    "openai>=2.14.0",
+    "tavily-python>=0.3.0",
 ]
 
 [project.scripts]
