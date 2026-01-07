@@ -8,9 +8,13 @@ class Glob(ToolSchema):
     
     def description(self):
         return dedent("""
-        Finds files matching a glob pattern. The pattern can include wildcards like '*' and '**'.
-        The pattern should generally be an absolute path.
-        The search is recursive if '**' is used.
+        Finds files matching a glob pattern, supporting wildcards like '*' and '**' (recursive).
+        Ideal for locating specific file types or files with known naming patterns across directories.
+        
+        Usage:
+        - Use `**` for recursive searching (e.g., '/path/to/project/**/*.py').
+        - The `pattern` should ideally be an absolute path.
+        - Returns a list of matching file paths.
         """)
     
     def json_schema(self):

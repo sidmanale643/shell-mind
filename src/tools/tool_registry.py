@@ -1,4 +1,5 @@
 from .read_file import FileReader 
+from .write_file import WriteFileTool
 from .list_file import Ls 
 from .glob_tool import Glob 
 from .grep_tool import Grep 
@@ -6,10 +7,15 @@ from .env_detector import EnvironmentDetector
 from .command_executor import CommandExecutor 
 from .check_git import GitInfo 
 from .check_process import CheckProcess
+from .memory import MemoryTool
+from .todo import TodoManager
+from .web_search import WebSearchTool
+from .workflow_manager import WorkflowManager
 
 class ToolRegistry:
-    def __init__(self):
+    def __init__(self, console=None):
         self.tool_box = {}
+        self.console = console
         self.register_all_tools()
 
     def register_tool(self, name, tool_obj):
@@ -20,13 +26,18 @@ class ToolRegistry:
     def register_all_tools(self):
         tools = [
             FileReader(),
+            WriteFileTool(),
             Ls(),
             Glob(),
             Grep(),
             EnvironmentDetector(),
-            CommandExecutor(),
+            CommandExecutor(console=self.console),
             GitInfo(),
             CheckProcess(),
+            MemoryTool(),
+            TodoManager(),
+            WebSearchTool(),
+            WorkflowManager(),
         ]
 
         for tool in tools:

@@ -18,6 +18,8 @@ class FileReader(ToolSchema):
     - The code line numbers will also be provided starting from 1.
     - The file_path parameter must be an absolute path, not a relative path
     - If a file does not exist or read file is empty you will be informed so.
+
+    IMPORTANT: You are not allowed to read .env (environment) files
     """)
     
     def json_schema(self):
@@ -40,6 +42,9 @@ class FileReader(ToolSchema):
     }
     
     def run(self, file_path: str):
+
+        if ".env" in file_path:
+            return "Restricted access to .env (environment) files"
 
         file_content = subprocess.run(
             f"cat -n {file_path}",

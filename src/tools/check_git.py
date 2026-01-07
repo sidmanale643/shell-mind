@@ -6,9 +6,14 @@ class GitInfo:
         self.name = "git_info"
     
     def description(self):
-        return """
-        Checks the git status, log, branch, and remote of the current directory.
-        """
+        return dedent("""
+        Retrieves essential Git metadata for the current repository.
+        Provides a summary of `git status`, the latest commit log, current branch name, and configured remotes.
+        
+        Use this to:
+        - Quickly assess the state of a repository.
+        - Identify the current working branch and recent changes.
+        """)
     
     def json_schema(self):
         return {

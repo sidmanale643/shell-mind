@@ -1,3 +1,4 @@
+from textwrap import dedent
 from .run_cmd import run_command
 
 class CheckProcess:
@@ -5,9 +6,14 @@ class CheckProcess:
         self.name = "check_process"
     
     def description(self):
-        return """
-        Checks if a process is running.
-        """
+        return dedent("""
+        Checks for running processes matching a specific name using `ps aux`.
+        Returns detailed process information if matches are found.
+        
+        Usage:
+        - `process_name` should be a substring to search for (e.g., 'nginx', 'python').
+        - Use this to verify if services are active or to debug running applications.
+        """)
     
     def json_schema(self):
         return {

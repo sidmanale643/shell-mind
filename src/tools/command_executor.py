@@ -5,7 +5,7 @@ from .schema import ToolSchema
 from textwrap import dedent
 from rich.console import Console
 from rich.text import Text
-from rich.prompt import Prompt, Confirm
+from rich.prompt import Confirm
 
 
 class CommandExecutor(ToolSchema):
@@ -14,9 +14,9 @@ class CommandExecutor(ToolSchema):
     Classifies commands by risk level and enforces execution policies.
     """
     
-    def __init__(self):
+    def __init__(self, console=None):
         self.name = "run_command"
-        self.console = Console()
+        self.console = console or Console()
         
         # Safe read-only commands that can be executed without restrictions
         self.safe_prefixes = [
@@ -29,7 +29,8 @@ class CommandExecutor(ToolSchema):
             "systemctl status", "systemctl list-units", "journalctl",
             "aws s3 ls", "aws ec2 describe-instances", "gcloud compute instances list",
             "terraform show", "terraform plan", "helm list", "helm status",
-            "curl", "wget --spider", "ping", "dig", "nslookup", "netstat", "ss",
+            "curl -s", "curl -L", "curl -I", "curl --head", "curl http",
+            "wget --spider", "ping", "dig", "nslookup", "netstat", "ss",
             "env", "printenv", "uname", "hostname"
         ]
         
@@ -42,44 +43,49 @@ class CommandExecutor(ToolSchema):
             "chmod 777", "chown -R", "chmod -R 777",
             ":(){ :|:& };:",  # Fork bomb
             "mv /", "cp -r /", "rsync -a /",
-            "wget http", "curl http", "curl -X POST", "curl -X PUT", "curl -X DELETE",
+            "curl -X POST", "curl -X PUT", "curl -X DELETE", "curl -X PATCH",
+            "wget -O", "wget --post", "wget --delete",
             "docker rm", "docker rmi", "docker system prune",
             "kubectl delete", "kubectl apply", "kubectl create",
-            "git push", "git reset --hard", "git clean -fd",
+            "git push --force", "git push -f", "git reset --hard", "git clean -fd",
             "npm install -g", "pip install", "apt install", "yum install", "brew install",
             "systemctl stop", "systemctl restart", "systemctl disable",
             "iptables", "ufw", "firewall-cmd",
             "crontab -r", "at ", "batch",
             "sudo su", "su -", "sudo -i"
         ]
+        
+        # Moderate commands that need confirmation but aren't dangerous
+        self.moderate_patterns = [
+            "git push",  # Safe git push (not force)
+            "curl -X",   # Other HTTP methods
+            "wget "      # Basic wget downloads
+        ]
     
     def description(self):
         return dedent("""
-        Executes shell commands and returns their output.
+        Executes shell commands and returns their output. Highly versatile for system administration and DevOps tasks.
         
         Use this tool to:
-        - Check system status (processes, disk usage, memory)
-        - Inspect Docker containers and images
-        - Query Kubernetes resources
-        - Read logs and system information
-        - Verify service status
-        - Run diagnostic commands
+        - Inspect system status (processes, disk usage, memory, etc.).
+        - Manage and query Docker containers, images, and Kubernetes resources.
+        - Verify service status, read logs, and perform project-wide diagnostics.
+        - Run arbitrary safe shell commands to automate tasks.
         
-        Safety Features:
-        - Only safe and moderate commands are allowed via this tool
-        - All commands require explicit user confirmation before execution
-        - Dangerous commands (rm, dd, shutdown, etc.) are blocked
-        - Commands timeout after 30 seconds
-        - Output is limited to 10KB
+        Safety & Compliance:
+        - Only safe and moderate commands are allowed; dangerous commands (e.g., recursive deletion, system shutdown) are blocked.
+        - ALL commands require explicit user confirmation before execution.
+        - Built-in protection against common destructive patterns.
+        - Standard execution limits: 30s timeout and 10KB output truncation.
         
         Examples:
-        - "docker ps -a"
-        - "kubectl get pods -n production"
-        - "systemctl status nginx"
-        - "df -h"
-        - "ps aux | grep nginx"
+        - `docker ps -a`
+        - `kubectl get pods -n production`
+        - `systemctl status nginx`
+        - `df -h`
+        - `ps aux | grep nginx`
         
-        Note: Commands are executed in the user's current shell environment.
+        Note: Commands are executed in the user's active shell environment.
         """)
     
     def json_schema(self):
@@ -108,15 +114,20 @@ class CommandExecutor(ToolSchema):
     
     def _classify_risk(self, command: str) -> str:
         """
-        Classify command risk level.
+        Classify command risk level with context-aware detection.
         Returns: 'safe', 'moderate', or 'dangerous'
         """
         command_lower = command.lower().strip()
         
-        # Check for dangerous patterns
+        # Check for dangerous patterns first
         for pattern in self.dangerous_patterns:
             if pattern.lower() in command_lower:
                 return "dangerous"
+        
+        # Check for moderate patterns (commands that need confirmation but aren't dangerous)
+        for pattern in self.moderate_patterns:
+            if pattern.lower() in command_lower:
+                return "moderate"
         
         # Check for safe prefixes
         for prefix in self.safe_prefixes:
@@ -155,6 +166,10 @@ class CommandExecutor(ToolSchema):
             }, indent=2)
 
         THEME_WARNING = "yellow"
+        self.console.print(Text.assemble(
+            ("Command to execute: ", "bold white"),
+            (command, "bold bright_cyan")
+        ))
         confirm_text = Text("Execute this command?", style="bold " + THEME_WARNING)
         
         should_execute = Confirm.ask(confirm_text)
@@ -163,13 +178,14 @@ class CommandExecutor(ToolSchema):
             try:
                 start_time = time.time()
                 
-                result = subprocess.run(
-                    command,
-                    shell=True,
-                    capture_output=True,
-                    text=True,
-                    timeout=timeout
-                )
+                with self.console.status(f"[bold green]Running: {command}"):
+                    result = subprocess.run(
+                        command,
+                        shell=True,
+                        capture_output=True,
+                        text=True,
+                        timeout=timeout
+                    )
                 
                 execution_time = time.time() - start_time
                 

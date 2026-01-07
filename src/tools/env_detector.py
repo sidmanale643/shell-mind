@@ -11,9 +11,13 @@ class EnvironmentDetector(ToolSchema):
     
     def description(self):
         return dedent("""
-        Gathers information about the user's environment, including OS, shell, CWD, and available tools.
-        Use this tool to understand the context in which commands will be executed.
-        Returns a JSON-formatted string with environment details.
+        Gathers comprehensive details about the current execution environment.
+        Includes OS version, active shell, current working directory, and availability of key DevOps tools (git, docker, kubectl, etc.).
+        
+        Use this at the start of a task to:
+        - Determine which commands are compatible with the OS.
+        - Check if necessary CLI tools are installed.
+        - Understand the current project context (e.g., active git branch).
         """)
     
     def json_schema(self):

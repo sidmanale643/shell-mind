@@ -9,9 +9,13 @@ class Grep(ToolSchema):
     
     def description(self):
         return dedent("""
-        Searches for a pattern in files within a directory. 
-        It uses 'grep -rnEI' which is recursive, shows line numbers, and ignores binary files.
-        The pattern can be a regular expression.
+        Performs a recursive text search (grep) for a pattern within a directory.
+        Uses `grep -rnEI` to provide line numbers and ignore binary files.
+        
+        Usage:
+        - `pattern` can be a literal string or an extended regular expression.
+        - `directory_path` must be an absolute path.
+        - Use this to find specific code usage, variable definitions, or configuration values across a project.
         """)
     
     def json_schema(self):
