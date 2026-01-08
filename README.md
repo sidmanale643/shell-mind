@@ -160,49 +160,6 @@ Try these commands to get started:
 - **Agent Mode**: Enable with `--agent` flag for autonomous execution
 - **Exit**: Type `exit` or `quit` in interactive mode, or press `Ctrl+C`
 
-## Web UI (Optional)
-
-ShellMind also includes a modern web interface if you prefer a graphical experience.
-
-### Prerequisites
-
-- **Node.js 20.19+** - [Download here](https://nodejs.org/)
-
-### Setup
-
-1. **Install backend dependencies**
-   ```bash
-   cd backend
-   pip install -r requirements.txt
-   cd ..
-   ```
-
-2. **Install frontend dependencies**
-   ```bash
-   cd frontend
-   npm install
-   cd ..
-   ```
-
-3. **Start the backend server** (Terminal 1)
-   ```bash
-   cd backend
-   python api.py
-   # Runs on http://localhost:8000
-   ```
-
-4. **Start the frontend** (Terminal 2)
-   ```bash
-   cd frontend
-   npm run dev
-   # Runs on http://localhost:5173
-   ```
-
-5. **Open your browser**
-   Navigate to [http://localhost:5173](http://localhost:5173)
-
-For detailed web UI documentation, see [QUICKSTART_WEB.md](QUICKSTART_WEB.md).
-
 ## Configuration
 
 ### Environment Variables
