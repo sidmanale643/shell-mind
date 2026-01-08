@@ -8,9 +8,67 @@ class WriteFileTool(ToolSchema):
 
     def description(self):
         return dedent("""
-        Use this tool to write a file to the local filesystem.
-        The file_path parameter must be an absolute path, not a relative path.
-        If the directory does not exist, it will be created.
+        Write content to a file, creating directories if needed.
+
+        ### When to Use
+        - Creating new files (config files, scripts, documentation)
+        - Modifying existing file contents
+        - Saving generated code, configurations, or outputs
+        - Writing logs or reports to disk
+
+        ### When NOT to Use
+        - Use `read_file` to only view file contents
+        - Use `run_command "cat file > newfile"` for simple copies (use write_file instead)
+        - Be cautious when modifying system files or critical configs
+
+        ### Parameters
+        - `file_path`: Absolute path where the file should be written (required). Example: "/Users/project/config.yml"
+        - `content`: The text content to write to the file (required). Can be multi-line.
+
+        ### Output Format
+        - Success: "File written successfully"
+        - Error: "Error writing file: {reason}"
+
+        ### Examples
+
+        **Create a Python script:**
+        Input: {
+            "file_path": "/Users/project/scripts/setup.py",
+            "content": "#!/usr/bin/env python3\\nimport os\\n\\ndef setup():\\n    print('Setting up...')\\n"
+        }
+        Output: "File written successfully"
+
+        **Write a configuration file:**
+        Input: {
+            "file_path": "/Users/project/config/app.yml",
+            "content": "version: '3'\\nservices:\\n  web:\\n    image: nginx:latest\\n    ports:\\n      - '80:80'\\n"
+        }
+        Output: "File written successfully"
+
+        **Create a README:**
+        Input: {
+            "file_path": "/Users/project/README.md",
+            "content": "# My Project\\n\\nThis is a sample project.\\n\\n## Installation\\n\\nRun `npm install` to get started.\\n"
+        }
+        Output: "File written successfully"
+
+        **Overwrite an existing file:**
+        Input: {
+            "file_path": "/Users/project/existing.txt",
+            "content": "This replaces the previous content completely."
+        }
+        Output: "File written successfully"
+
+        ### Features
+        - Creates parent directories automatically if they don't exist
+        - Overwrites existing files completely (no append mode)
+        - Must use absolute paths (starting with / on Unix/macOS)
+
+        ### Important Notes
+        - This tool OVERWRITES existing files completely
+        - No backup is created before overwriting
+        - Use `read_file` first if you need to check existing contents
+        - Consider using `todo_manager` when making multiple file changes
         """)
 
     def json_schema(self):

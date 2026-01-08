@@ -8,18 +8,47 @@ class FileReader(ToolSchema):
     
     def description(self):
         return dedent("""
-    Reads a file from the local filesystem. You can access any file directly by using this tool.
-    Assume this tool is able to read all files on the machine. 
-    If the User provides a path to a file assume that path is valid. It is okay to read a file that does not exist; an error will be returned.
+    Read file contents with line numbers. Works for any accessible file on the system.
 
-    Use this tool to read docker compose files, kubernetes files, and other configuration files.
+    ### When to Use
+    - Reading source code, config files, documentation
+    - Inspecting docker-compose.yml, Kubernetes manifests, README files
+    - Viewing logs or any text-based file
+    - Checking file contents before making changes
 
-    Usage:
-    - The code line numbers will also be provided starting from 1.
-    - The file_path parameter must be an absolute path, not a relative path
-    - If a file does not exist or read file is empty you will be informed so.
+    ### When NOT to Use
+    - Use `list_file` to just check directory contents
+    - Use `grep` to search across multiple files
+    - Use `glob` to find files by pattern
+    - Use `write_file` to create or modify files
 
-    IMPORTANT: You are not allowed to read .env (environment) files
+    ### Parameters
+    - `file_path`: Absolute path to the file (required). Example: "/Users/project/app.py"
+
+    ### Output Format
+    - Success: "File Content:\\n{line_number}\\t{content}"
+    - Empty file: "File is empty"
+    - Not found: "File does not exist"
+    - Restricted: "Restricted access to .env (environment) files"
+
+    ### Examples
+
+    **Read a Python file:**
+    Input: {"file_path": "/Users/project/src/main.py"}
+    Output: "File Content:\\n1\\timport os\\n2\\t\\n3\\tdef main():\\n..."
+
+    **Read a Docker Compose file:**
+    Input: {"file_path": "/Users/project/docker-compose.yml"}
+    Output: "File Content:\\n1\\tversion: '3'\\n2\\tservices:\\n3\\t  web:..."
+
+    **File doesn't exist:**
+    Input: {"file_path": "/Users/project/missing.txt"}
+    Output: "File does not exist"
+
+    ### Important Constraints
+    - .env files are blocked for security
+    - Maximum file size: 1MB (larger files will be truncated)
+    - Must use absolute paths (starting with / on Unix/macOS)
     """)
     
     def json_schema(self):

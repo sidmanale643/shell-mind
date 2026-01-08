@@ -64,29 +64,127 @@ class CommandExecutor(ToolSchema):
     
     def description(self):
         return dedent("""
-        Executes shell commands and returns their output. Highly versatile for system administration and DevOps tasks.
-        
-        Use this tool to:
-        - Inspect system status (processes, disk usage, memory, etc.).
-        - Manage and query Docker containers, images, and Kubernetes resources.
-        - Verify service status, read logs, and perform project-wide diagnostics.
-        - Run arbitrary safe shell commands to automate tasks.
-        
-        Safety & Compliance:
-        - Only safe and moderate commands are allowed; dangerous commands (e.g., recursive deletion, system shutdown) are blocked.
-        - ALL commands require explicit user confirmation before execution.
-        - Built-in protection against common destructive patterns.
-        - Standard execution limits: 30s timeout and 10KB output truncation.
-        
-        Examples:
-        - `docker ps -a`
-        - `kubectl get pods -n production`
-        - `systemctl status nginx`
-        - `df -h`
-        - `ps aux | grep nginx`
-        
-        Note: Commands are executed in the user's active shell environment.
-        """)
+        Execute shell commands with safety checks and user confirmation.
+
+        ### When to Use
+        - Running system administration commands (ps, df, systemctl, etc.)
+        - Managing Docker containers and images
+        - Managing Kubernetes resources (kubectl)
+        - Git operations (status, log, diff, branch)
+        - Cloud CLI operations (aws, gcloud, az)
+        - Running custom scripts or commands not available as dedicated tools
+        - Checking service status, logs, and diagnostics
+
+        ### When NOT to Use
+        - Use `read_file` instead of `cat file.txt`
+        - Use `glob` instead of `find` commands for simple file searches
+        - Use `grep` tool instead of `grep` command for text searches
+        - Use `list_file` instead of `ls` for directory listings
+        - Dangerous commands will be automatically blocked
+
+        ### Parameters
+        - `command`: Shell command to execute (required). Examples: "docker ps", "kubectl get pods"
+        - `timeout`: Maximum execution time in seconds (optional, default: 30)
+
+        ### Output Format
+        Returns JSON with structure:
+        ```json
+        {
+            "success": true/false,
+            "command": "the executed command",
+            "return_code": 0,
+            "stdout": "standard output content",
+            "stderr": "error output content",
+            "execution_time": 1.23,
+            "risk_level": "safe|moderate|dangerous",
+            "stdout_truncated": false,
+            "stderr_truncated": false
+        }
+        ```
+        Or on user rejection:
+        ```json
+        {
+            "success": false,
+            "error": "User rejected the command",
+            "command": "..."
+        }
+        ```
+
+        ### Examples
+
+        **List Docker containers (safe - auto-executed):**
+        Input: {"command": "docker ps -a"}
+        Output: {
+            "success": true,
+            "command": "docker ps -a",
+            "return_code": 0,
+            "stdout": "CONTAINER ID   IMAGE     STATUS   NAMES\\nabc123   nginx     Up       web",
+            "stderr": "",
+            "execution_time": 0.45,
+            "risk_level": "safe"
+        }
+
+        **Check service status (safe - auto-executed):**
+        Input: {"command": "systemctl status nginx"}
+        Output: {
+            "success": true,
+            "command": "systemctl status nginx",
+            "return_code": 0,
+            "stdout": "● nginx.service - A high performance web server\\n   Loaded: loaded...",
+            "risk_level": "safe"
+        }
+
+        **Get Kubernetes pods (safe - auto-executed):**
+        Input: {"command": "kubectl get pods -n production"}
+        Output: {
+            "success": true,
+            "command": "kubectl get pods -n production",
+            "return_code": 0,
+            "stdout": "NAME              READY   STATUS    RESTARTS   AGE\\napp-pod-7d8f   1/1     Running   0          2d",
+            "risk_level": "safe"
+        }
+
+        **User rejects command:**
+        Input: {"command": "git push origin main"}
+        Output: {
+            "success": false,
+            "error": "User rejected the command",
+            "command": "git push origin main"
+        }
+
+        **Dangerous command blocked:**
+        Input: {"command": "rm -rf /important/data"}
+        Output: {
+            "success": false,
+            "error": "Command rejected: This command is classified as dangerous and cannot be executed.",
+            "risk_level": "dangerous",
+            "command": "rm -rf /important/data",
+            "suggestion": "Please run this command manually if you're certain it's safe."
+        }
+
+        ### Safety Classification
+
+        **Safe Commands** (executed after confirmation):
+        - Read-only commands: ls, cat, ps, df, docker ps, kubectl get, git status/log/diff
+        - Status checks: systemctl status, service status, top, htop
+        - Network diagnostics: ping, curl, wget, dig, nslookup
+
+        **Moderate Commands** (require confirmation):
+        - git push, curl with -X, wget downloads
+        - Any command not in safe list
+
+        **Dangerous Commands** (blocked):
+        - Destructive: rm -rf, dd, mkfs, shutdown, reboot
+        - System modifications: chmod 777, chown -R, iptables
+        - Force operations: git push --force, kubectl delete, docker rmi
+
+        ### Important Notes
+        - ALL commands require user confirmation before execution
+        - Commands timeout after 30 seconds by default
+        - Output is truncated at 10KB for stdout and stderr
+        - Commands run in the user's active shell environment
+        - If user rejects a command, DO NOT retry immediately
+        - """)
     
     def json_schema(self):
         return {

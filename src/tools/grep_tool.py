@@ -9,14 +9,73 @@ class Grep(ToolSchema):
     
     def description(self):
         return dedent("""
-        Performs a recursive text search (grep) for a pattern within a directory.
-        Uses `grep -rnEI` to provide line numbers and ignore binary files.
-        
-        Usage:
-        - `pattern` can be a literal string or an extended regular expression.
-        - `directory_path` must be an absolute path.
-        - Use this to find specific code usage, variable definitions, or configuration values across a project.
-        """)
+        Perform recursive text search for a pattern across files in a directory.
+
+        ### When to Use
+        - Finding where a function, variable, or class is defined
+        - Searching for specific code usage or patterns across a project
+        - Locating configuration values or settings
+        - Finding all occurrences of a string/text in multiple files
+
+        ### When NOT to Use
+        - Use `glob` to find files by name/pattern (not content)
+        - Use `read_file` to inspect a specific file's full contents
+        - Use `run_command "grep ..."` only if you need special grep flags
+
+        ### Parameters
+        - `pattern`: The text or regex pattern to search for (required). Can be:
+          - Literal string: "function_name"
+          - Regex: "def \\w+\\(", "import .*os", "TODO|FIXME"
+        - `directory_path`: Absolute path to search directory (required). Example: "/Users/project/src"
+
+        ### Output Format
+        - Success: "Grep results for '{pattern}' in '{dir}':\\n{file}:{line}:{content}"
+        - No matches: "No matches found for pattern '{pattern}' in '{dir}'."
+        - Error: "Error executing grep: {error_details}"
+
+        ### Examples
+
+        **Find function definition:**
+        Input: {"pattern": "def main", "directory_path": "/Users/project/src"}
+        Output: "Grep results for 'def main' in '/Users/project/src':
+        /Users/project/src/main.py:15:def main():
+        /Users/project/src/app.py:8:    def main(self):"
+
+        **Find import statements:**
+        Input: {"pattern": "import os", "directory_path": "/Users/project"}
+        Output: "Grep results for 'import os' in '/Users/project':
+        /Users/project/src/utils.py:1:import os
+        /Users/project/src/helpers.py:3:import os
+        /Users/project/tests/test_utils.py:2:import os"
+
+        **Search for TODO comments:**
+        Input: {"pattern": "TODO|FIXME", "directory_path": "/Users/project"}
+        Output: "Grep results for 'TODO|FIXME' in '/Users/project':
+        /Users/project/src/api.py:45:# TODO: Add error handling
+        /Users/project/src/db.py:120:# FIXME: This query is slow"
+
+        **Search for configuration value:**
+        Input: {"pattern": "DATABASE_URL", "directory_path": "/Users/project/config"}
+        Output: "Grep results for 'DATABASE_URL' in '/Users/project/config':
+        /Users/project/config/settings.py:12:DATABASE_URL = os.getenv('DB_URL')
+        /Users/project/config/test.py:8:DATABASE_URL = 'localhost:5432'"
+
+        **No matches found:**
+        Input: {"pattern": "unicorn", "directory_path": "/Users/project/src"}
+        Output: "No matches found for pattern 'unicorn' in '/Users/project/src'."
+
+        ### Features
+        - Recursive search (includes subdirectories)
+        - Line numbers included in output
+        - Extended regex supported (use | for OR, \\w+ for word patterns, etc.)
+        - Ignores binary files automatically
+        - Output truncated at 10KB if too large
+
+        ### Tips
+        - Use specific patterns to avoid overwhelming results
+        - Chain with `read_file` to see context around matches
+        - For case-insensitive search, use regex flag: "(?i)pattern"
+        - """)
     
     def json_schema(self):
         return {
